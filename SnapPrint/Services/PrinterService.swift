@@ -74,7 +74,7 @@ final class PrinterService: @unchecked Sendable {
         defer { SMPort.release(port) }
 
         // 2. Build lệnh in ảnh (StarGraphic emulation cho ảnh bitmap)
-        guard let builder = StarIoExt.createCommandBuilder(StarIoExt.Emulation.StarGraphic) else {
+        guard let builder = StarIoExt.createCommandBuilder(StarIoExtEmulation.starGraphic) else {
             throw SnapPrintError.printerError("Cannot create command builder")
         }
         builder.beginDocument()
@@ -93,8 +93,9 @@ final class PrinterService: @unchecked Sendable {
         }
         var written: UInt32 = 0
         commands.bytes.withUnsafeBytes { ptr in
-            _ = port.write(
+            _ = try? port.write(
                 writeBuffer:          ptr.baseAddress?.assumingMemoryBound(to: UInt8.self),
+                offset:               0,
                 size:                 UInt32(commands.length),
                 numberOfBytesWritten: &written
             )
@@ -123,10 +124,9 @@ final class PrinterService: @unchecked Sendable {
 #endif
 
                 // Với USB, search theo "USB:" prefix
-                let printerList = SMPort.searchPrinter(portType: "USB:") as? [[String: String]] ?? []
+                let printerList = SMPort.searchPrinter(target: "USB:") as? [PortInfo] ?? []
                 let ports = printerList.compactMap { info -> PrinterPort? in
-                    guard let portName = info["portName"] else { return nil }
-                    return PrinterPort(name: portName, modelName: info["modelName"])
+                    return PrinterPort(name: info.portName, modelName: info.modelName)
                 }
                 continuation.resume(returning: ports)
             }
