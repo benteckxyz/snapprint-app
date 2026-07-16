@@ -64,7 +64,7 @@ final class PrinterService: @unchecked Sendable {
 
         // ── STARPRNT SDK – USB-C Connection ─────────────────────────────
         // 1. Mở port USB-C
-        guard let port = SMPort.getPort(
+        guard let port = try? SMPort.getPort(
             portName:         AppConfig.printerPortName,     // "USB:Star mC-Print3"
             portSettings:     AppConfig.printerPortSettings, // ""
             ioTimeoutMillis:  AppConfig.printerTimeout        // 10000
@@ -74,16 +74,18 @@ final class PrinterService: @unchecked Sendable {
         defer { SMPort.release(port) }
 
         // 2. Build lệnh in ảnh (StarGraphic emulation cho ảnh bitmap)
-        guard let builder = ISCBBuilder(emulation: StarIoExt.Emulation.StarGraphic) else {
+        guard let builder = StarIoExt.createCommandBuilder(StarIoExt.Emulation.StarGraphic) else {
             throw SnapPrintError.printerError("Cannot create command builder")
         }
+        builder.beginDocument()
         builder.appendBitmap(
             image,
             diffusion: true,                               // Floyd-Steinberg trong SDK
             width:     Int32(AppConfig.thermalPrintWidthPx), // 576px cho 80mm
             bothScale: true
         )
-        builder.appendCutPaper(.partial)                   // cắt giấy sau khi in
+        builder.appendCutPaper(SCBCutPaperAction.partialCut)  // cắt giấy sau khi in
+        builder.endDocument()
 
         // 3. Gửi lệnh đến máy in
         guard let commands = builder.commands else {
@@ -92,9 +94,9 @@ final class PrinterService: @unchecked Sendable {
         var written: UInt32 = 0
         commands.bytes.withUnsafeBytes { ptr in
             _ = port.write(
-                ptr.baseAddress?.assumingMemoryBound(to: UInt8.self),
-                size:                    UInt32(commands.length),
-                numberOfBytesWritten:    &written
+                writeBuffer:          ptr.baseAddress?.assumingMemoryBound(to: UInt8.self),
+                size:                 UInt32(commands.length),
+                numberOfBytesWritten: &written
             )
         }
         guard written == UInt32(commands.length) else {
