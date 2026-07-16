@@ -41,20 +41,16 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 
 	<!-- ─── Camera ──────────────────────────────────────── -->
 	<key>NSCameraUsageDescription</key>
-	<string>SnapPrint cần camera để chụp ảnh cho in nhiệt.</string>
+	<string>SnapPrint uses the camera to take photos for thermal printing.</string>
 
 	<!-- ─── USB-C MFi (Star mC-Print3) ─────────────────── -->
 	<key>UISupportedExternalAccessoryProtocols</key>
@@ -64,7 +60,7 @@
 
 	<!-- ─── Local Network ───────────────────────────────── -->
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>SnapPrint có thể dùng mạng LAN để kết nối máy in.</string>
+	<string>SnapPrint may use the local network to connect to the receipt printer.</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_pdl-datastream._tcp</string>

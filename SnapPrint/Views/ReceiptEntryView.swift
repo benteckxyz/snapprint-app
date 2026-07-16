@@ -291,11 +291,15 @@ struct AdminSettingsView: View {
     @State private var backendURL  = AppConfig.backendBaseURL
     @State private var printerPort = AppConfig.printerPortName
     @State private var apiKey      = AppConfig.apiKey
+#if DEBUG
     @State private var mockMode    = AppConfig.mockMode
+    @State private var mockPrinter = AppConfig.mockPrinter
+#endif
 
     var body: some View {
         NavigationStack {
             Form {
+#if DEBUG
                 Section {
                     Toggle("Mock Mode", isOn: $mockMode)
                 } header: {
@@ -303,6 +307,7 @@ struct AdminSettingsView: View {
                 } footer: {
                     Text("Mock mode bypasses real backend & printer for testing.")
                 }
+#endif
 
                 Section("Backend") {
                     TextField("https://api.yourdomain.com", text: $backendURL)
@@ -315,19 +320,22 @@ struct AdminSettingsView: View {
                 }
 
                 Section("Printer") {
+#if DEBUG
+                    Toggle("Mock Printer", isOn: $mockPrinter)
+#endif
                     TextField("USB:Star mC-Print3", text: $printerPort)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
-                    Text("Formats: USB:Star mC-Print3  or  TCP:192.168.x.x")
+                    Text("Format: USB:Star mC-Print3  or  TCP:192.168.x.x")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
                 Section("App Info") {
-                    LabeledContent("Version",  value: "1.0.0")
-                    LabeledContent("Bundle",   value: "xyz.benteck.snapprint")
-                    LabeledContent("Printer",  value: "Star mC-Print3 (mCP31Ci)")
-                    LabeledContent("Paper",    value: "80mm · 203 DPI")
+                    LabeledContent("Version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
+                    LabeledContent("Bundle",  value: Bundle.main.bundleIdentifier ?? "xyz.benteck.snapprint")
+                    LabeledContent("Printer", value: "Star mC-Print3 (mCP31Ci)")
+                    LabeledContent("Paper",   value: "80mm · 203 DPI")
                 }
             }
             .navigationTitle("Admin Settings")
@@ -341,7 +349,10 @@ struct AdminSettingsView: View {
                         AppConfig.backendBaseURL  = backendURL
                         AppConfig.printerPortName = printerPort
                         AppConfig.apiKey          = apiKey
+#if DEBUG
                         AppConfig.mockMode        = mockMode
+                        AppConfig.mockPrinter     = mockPrinter
+#endif
                         dismiss()
                     }
                     .fontWeight(.bold)

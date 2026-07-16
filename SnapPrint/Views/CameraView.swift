@@ -87,14 +87,9 @@ struct CameraView: View {
 
             Spacer()
 
-            Button(action: { viewModel.flipCamera() }) {
-                Image(systemName: "arrow.triangle.2.circlepath.camera")
-                    .font(.system(size: 18))
-                    .foregroundStyle(viewModel.isCameraReady ? .white : .white.opacity(0.3))
-                    .frame(width: 44, height: 44)
-                    .background(.white.opacity(0.12), in: Circle())
-            }
-            .disabled(!viewModel.isCameraReady)
+            // Invisible balance spacer
+            Color.clear
+                .frame(width: 44, height: 44)
         }
         .padding(.horizontal, 20)
         .padding(.top, 16)
@@ -156,7 +151,13 @@ struct CameraPreviewLayer: UIViewRepresentable {
 
     class PreviewView: UIView {
         override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
-        var videoPreviewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
+        // layerClass override guarantees this cast is safe
+        var videoPreviewLayer: AVCaptureVideoPreviewLayer {
+            guard let layer = layer as? AVCaptureVideoPreviewLayer else {
+                fatalError("PreviewView.layerClass must return AVCaptureVideoPreviewLayer")
+            }
+            return layer
+        }
     }
 }
 
@@ -176,7 +177,7 @@ final class CameraViewModel: NSObject, ObservableObject {
 
     let session = AVCaptureSession()
     private var photoOutput = AVCapturePhotoOutput()
-    private var currentCameraPosition: AVCaptureDevice.Position = .back
+    private var currentCameraPosition: AVCaptureDevice.Position = .front
     private var countdownTask: Task<Void, Never>?
 
     // MARK: - Session lifecycle
@@ -308,31 +309,31 @@ final class CameraViewModel: NSObject, ObservableObject {
     // MARK: - Capture
 
     func capturePhoto() {
-        // Simulator hoặc không có kết nối thật → dùng mock image
         guard !photoOutput.connections.isEmpty else {
+#if DEBUG
             useMockPhoto()
+#else
+            errorMessage = "Camera not ready. Please try again."
+            showError = true
+#endif
             return
         }
-
         let settings = AVCapturePhotoSettings()
         photoOutput.capturePhoto(with: settings, delegate: self)
     }
 
-    /// Mock photo cho simulator / không có camera
+#if DEBUG
+    /// Mock photo — DEBUG only (simulator / no camera hardware)
     private func useMockPhoto() {
         let renderer = UIGraphicsImageRenderer(size: CGSize(width: 576, height: 750))
         let mockImage = renderer.image { ctx in
-            // Background gradient
             let colors = [UIColor(red: 0.1, green: 0.05, blue: 0.2, alpha: 1),
                           UIColor(red: 0.05, green: 0.1, blue: 0.3, alpha: 1)]
-            let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(),
-                                      colors: colors.map(\.cgColor) as CFArray,
-                                      locations: [0, 1])!
-            ctx.cgContext.drawLinearGradient(gradient,
-                                             start: .zero,
-                                             end: CGPoint(x: 0, y: 750),
-                                             options: [])
-            // Label
+            guard let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(),
+                                            colors: colors.map(\.cgColor) as CFArray,
+                                            locations: [0, 1]) else { return }
+            ctx.cgContext.drawLinearGradient(gradient, start: .zero,
+                                             end: CGPoint(x: 0, y: 750), options: [])
             let attrs: [NSAttributedString.Key: Any] = [
                 .font: UIFont.boldSystemFont(ofSize: 40),
                 .foregroundColor: UIColor.white
@@ -344,13 +345,14 @@ final class CameraViewModel: NSObject, ObservableObject {
                                    withAttributes: attrs)
         }
         Task { @MainActor in
-            self.showFlash = true
+            self.showFlash      = true
             try? await Task.sleep(nanoseconds: 150_000_000)
-            self.showFlash = false
-            self.capturedPhoto     = mockImage
+            self.showFlash      = false
+            self.capturedPhoto  = mockImage
             self.navigateToPreview = true
         }
     }
+#endif
 }
 
 // MARK: - AVCapturePhotoCaptureDelegate

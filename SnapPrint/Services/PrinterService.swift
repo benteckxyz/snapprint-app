@@ -55,13 +55,12 @@ final class PrinterService: @unchecked Sendable {
 
     private func performPrint(image: UIImage) throws {
 
-        // ── MOCK MODE ────────────────────────────────────────────────────
-        if AppConfig.mockMode {
-            print("[PrinterService] 🖨️ MOCK PRINT – USB:Star mC-Print3 – \(AppConfig.mockPrintDelay)s delay")
+#if DEBUG
+        if AppConfig.mockMode || AppConfig.mockPrinter {
             Thread.sleep(forTimeInterval: AppConfig.mockPrintDelay)
             return
         }
-        // ────────────────────────────────────────────────────────────────
+#endif
 
         // ── STARPRNT SDK – USB-C Connection ─────────────────────────────
         // Uncomment toàn bộ block dưới đây sau khi add SPM packages:
@@ -119,13 +118,14 @@ final class PrinterService: @unchecked Sendable {
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .background).async {
 
-                // Mock response:
-                if AppConfig.mockMode {
+#if DEBUG
+                if AppConfig.mockMode || AppConfig.mockPrinter {
                     let mockPort = PrinterPort(name: AppConfig.printerPortName,
                                               modelName: "Star mC-Print3 (mCP31Ci) – USB-C")
                     continuation.resume(returning: [mockPort])
                     return
                 }
+#endif
 
                 // SDK (uncomment sau khi thêm StarIO):
                 //

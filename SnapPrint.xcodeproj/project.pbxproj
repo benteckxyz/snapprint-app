@@ -17,7 +17,8 @@
 		C10E6CC9C50549979D0DCD7A /* CameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8375C968AB674F918D0D038F /* CameraView.swift */; };
 		E4F009925DF2447F868C7024 /* SquareAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C3864567C80490C8844E05D /* SquareAPIService.swift */; };
 		E9AEDEC271D9467ABE698277 /* ReceiptEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B7CF4536E454D19A3D9C09A /* ReceiptEntryView.swift */; };
-/* End PBXBuildFile section */
+		7CBE09E356474ADF9BF49A7A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0E966EB8457F4FE2B7ED1194 /* Assets.xcassets */; };
+		/* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		3B7CF4536E454D19A3D9C09A /* ReceiptEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiptEntryView.swift; sourceTree = "<group>"; };
@@ -32,7 +33,8 @@
 		CDC3937C22C747B6996D0188 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D4E3CAF7E55B4AF09A8C96FA /* CountdownOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountdownOverlay.swift; sourceTree = "<group>"; };
 		F2E3C6099BFC4DA4AF51A9E9 /* PrinterService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrinterService.swift; sourceTree = "<group>"; };
-/* End PBXFileReference section */
+		0E966EB8457F4FE2B7ED1194 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = SnapPrint/Resources/Assets.xcassets; sourceTree = SOURCE_ROOT; };
+		/* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		322C7C332A3B4B70B9F39213 /* Frameworks */ = {
@@ -90,6 +92,7 @@
 		8A12D82057EF4F2AA8169E93 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				0E966EB8457F4FE2B7ED1194 /* Assets.xcassets */,
 				CDC3937C22C747B6996D0188 /* Info.plist */,
 			);
 			path = Resources;
@@ -185,6 +188,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7CBE09E356474ADF9BF49A7A /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -214,6 +218,7 @@
 		35CF170760C747C78E327942 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
@@ -262,6 +267,7 @@
 		F1183847C72348BBB031B2D9 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;

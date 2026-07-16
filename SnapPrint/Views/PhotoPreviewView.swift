@@ -8,6 +8,7 @@ struct PhotoPreviewView: View {
     let receiptId: String
 
     @StateObject private var viewModel = PhotoPreviewViewModel()
+    @State private var composedPreview: UIImage? = nil
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var router: AppRouter
 
@@ -16,29 +17,35 @@ struct PhotoPreviewView: View {
             backgroundGradient
 
             VStack(spacing: 0) {
-                // Header
                 header
                     .padding(.top, 8)
 
-                Spacer(minLength: 20)
+                Spacer(minLength: 16)
 
-                // Photo frame
                 photoFrame
 
-                Spacer(minLength: 20)
+                Spacer(minLength: 16)
 
-                // Print state info
-                printStatusLabel
-
-                // Action buttons
                 actionButtons
                     .padding(.bottom, 40)
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, 0)
         }
         .navigationBarHidden(true)
         .statusBarHidden(false)
         .onAppear { viewModel.image = image }
+        .task {
+            let raw = image
+            let result: UIImage = await Task.detached(priority: .userInitiated) {
+                let oriented = ImageProcessor.shared.fixOrientationPublic(raw)
+                let small    = ImageProcessor.shared.downsample(oriented, maxWidth: 800)
+                let bw       = ImageProcessor.shared.processPhotoForPreview(small)
+                return ImageProcessor.shared.composeLayout(photo: bw)
+            }.value
+            withAnimation(.easeIn(duration: 0.35)) {
+                composedPreview = result
+            }
+        }
         .alert("Print Error", isPresented: $viewModel.showError) {
             Button("OK") {}
         } message: {
@@ -67,35 +74,11 @@ struct PhotoPreviewView: View {
 
     private var header: some View {
         HStack {
-            Button(action: { dismiss() }) {
-                HStack(spacing: 6) {
-                    Image(systemName: "arrow.uturn.left")
-                        .font(.system(size: 14, weight: .semibold))
-                    Text("Retake")
-                        .font(.system(size: 15, weight: .semibold))
-                }
-                .foregroundStyle(.white.opacity(0.8))
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(.white.opacity(0.1), in: Capsule())
-            }
-
             Spacer()
-
             Text("Preview")
                 .font(.system(size: 18, weight: .bold))
                 .foregroundStyle(.white)
-
             Spacer()
-
-            // Spacer to balance layout
-            HStack(spacing: 6) {
-                Image(systemName: "arrow.uturn.left")
-                    .font(.system(size: 14, weight: .semibold))
-                Text("Retake")
-                    .font(.system(size: 15, weight: .semibold))
-            }
-            .opacity(0) // Hidden spacer for centering
         }
     }
 
@@ -103,44 +86,56 @@ struct PhotoPreviewView: View {
 
     private var photoFrame: some View {
         GeometryReader { geo in
-            let maxWidth   = min(geo.size.width, 360.0)
-            // Composed image aspect: photo + footer (~18% extra height)
-            let frameSize  = CGSize(width: maxWidth, height: maxWidth * 1.42)
+            let hPad: CGFloat = 24
+            let frameWidth    = geo.size.width - hPad * 2
+            let frameHeight   = frameWidth * 1.42
 
-            // Build composed preview (same as what will be printed)
-            let composed = ImageProcessor.shared.composeLayout(photo: image)
+            ZStack(alignment: .topTrailing) {
+                if let preview = composedPreview {
+                    // Cached result — no recompute on layout pass
+                    Image(uiImage: preview)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: frameWidth, height: frameHeight)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .shadow(color: .black.opacity(0.55), radius: 28, x: -4, y: 10)
+                        .shadow(color: Color(red: 0.4, green: 0.2, blue: 0.8).opacity(0.25), radius: 16, x: 0, y: 4)
+                        .rotationEffect(.degrees(-1.8))
+                } else {
+                    // Skeleton while processing on background thread
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(.white.opacity(0.06))
+                        .frame(width: frameWidth, height: frameHeight)
+                        .overlay(ProgressView().tint(.white).scaleEffect(1.4))
+                        .rotationEffect(.degrees(-1.8))
+                }
 
-            ZStack {
-                // Outer glow
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(Color.purple.opacity(0.15))
-                    .frame(width: frameSize.width + 20, height: frameSize.height + 20)
-                    .blur(radius: 20)
-
-                // Composed print preview
-                Image(uiImage: composed)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: frameSize.width, height: frameSize.height)
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .strokeBorder(
-                                LinearGradient(
-                                    colors: [.white.opacity(0.3), .white.opacity(0.05)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 1.5
-                            )
+                // Ready badge — show once preview is loaded and idle
+                if viewModel.printState == .idle, composedPreview != nil {
+                    HStack(spacing: 5) {
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 7, height: 7)
+                        Text("Ready")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule()
+                            .fill(Color(red: 0.1, green: 0.55, blue: 0.3).opacity(0.92))
+                            .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
                     )
-                    .shadow(color: .black.opacity(0.5), radius: 24, y: 12)
+                    .offset(x: -18, y: 18)   // inside top-right of frame
+                    .zIndex(10)
+                }
 
                 // Print processing overlay
                 if viewModel.printState == .processing {
-                    RoundedRectangle(cornerRadius: 20)
+                    RoundedRectangle(cornerRadius: 16)
                         .fill(.black.opacity(0.6))
-                        .frame(width: frameSize.width, height: frameSize.height)
+                        .frame(width: frameWidth, height: frameHeight)
                         .overlay(
                             VStack(spacing: 16) {
                                 ProgressView()
@@ -152,13 +147,14 @@ struct PhotoPreviewView: View {
                                     .multilineTextAlignment(.center)
                             }
                         )
-                        .clipShape(RoundedRectangle(cornerRadius: 20))
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .rotationEffect(.degrees(-1.8))
                 }
 
                 if viewModel.printState == .printing {
-                    RoundedRectangle(cornerRadius: 20)
+                    RoundedRectangle(cornerRadius: 16)
                         .fill(.black.opacity(0.6))
-                        .frame(width: frameSize.width, height: frameSize.height)
+                        .frame(width: frameWidth, height: frameHeight)
                         .overlay(
                             VStack(spacing: 16) {
                                 Image(systemName: "printer.fill")
@@ -169,14 +165,15 @@ struct PhotoPreviewView: View {
                                         .easeInOut(duration: 0.6).repeatForever(autoreverses: true),
                                         value: viewModel.printerIconPulse
                                     )
-                                    .onAppear { viewModel.printerIconPulse = true }
+                                    .onAppear  { viewModel.printerIconPulse = true  }
                                     .onDisappear { viewModel.printerIconPulse = false }
                                 Text("Printing...")
                                     .font(.system(size: 15, weight: .medium))
                                     .foregroundStyle(.white)
                             }
                         )
-                        .clipShape(RoundedRectangle(cornerRadius: 20))
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .rotationEffect(.degrees(-1.8))
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -236,12 +233,12 @@ struct PhotoPreviewView: View {
 
     private var actionButtons: some View {
         HStack(spacing: 16) {
-            // Cancel / Retake
+            // Retake
             Button(action: { dismiss() }) {
                 HStack(spacing: 8) {
-                    Image(systemName: "xmark")
+                    Image(systemName: "camera.rotate")
                         .font(.system(size: 15, weight: .semibold))
-                    Text("Cancel")
+                    Text("Retake")
                         .font(.system(size: 16, weight: .semibold))
                 }
                 .frame(maxWidth: .infinity)
@@ -287,6 +284,7 @@ struct PhotoPreviewView: View {
             }
             .disabled(viewModel.isPrinting)
         }
+        .padding(.horizontal, 24)
     }
 
     // navigateBackToStart() removed — using router.popToRoot() instead

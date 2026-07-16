@@ -39,44 +39,27 @@ final class SquareAPIService {
     /// Check if a receipt code exists and whether it has been printed.
     func checkReceipt(code: String) async throws -> ReceiptCheckResponse {
 
-        // ── MOCK MODE ────────────────────────────────────────────────────
+#if DEBUG
         if AppConfig.mockMode {
-            try? await Task.sleep(nanoseconds: 800_000_000) // simulate network delay
-
-            // Simulate "already printed" for codes ending with "X"
+            try? await Task.sleep(nanoseconds: 800_000_000)
             if code.uppercased().hasSuffix("X") {
-                return ReceiptCheckResponse(
-                    exists: true,
-                    printed: true,
-                    receiptId: AppConfig.mockReceiptId,
-                    message: "Already printed"
-                )
+                return ReceiptCheckResponse(exists: true, printed: true,
+                                            receiptId: AppConfig.mockReceiptId, message: "Already printed")
             }
-            // Simulate "not found" for codes shorter than 4 chars
             if code.count < 4 {
-                return ReceiptCheckResponse(
-                    exists: false,
-                    printed: false,
-                    receiptId: nil,
-                    message: "Receipt not found"
-                )
+                return ReceiptCheckResponse(exists: false, printed: false,
+                                            receiptId: nil, message: "Receipt not found")
             }
-            // Any other code → valid & not printed yet
-            return ReceiptCheckResponse(
-                exists: true,
-                printed: false,
-                receiptId: AppConfig.mockReceiptId,
-                message: nil
-            )
+            return ReceiptCheckResponse(exists: true, printed: false,
+                                        receiptId: AppConfig.mockReceiptId, message: nil)
         }
-        // ────────────────────────────────────────────────────────────────
+#endif
 
         guard let url = URL(string: "\(AppConfig.backendBaseURL)\(AppConfig.receiptEndpoint)/\(code.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? code)") else {
             throw SnapPrintError.invalidURL
         }
 
-        var request = makeRequest(url: url)
-
+        let request = makeRequest(url: url)
         let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -98,13 +81,12 @@ final class SquareAPIService {
     /// Mark a receipt as printed after successful print job.
     func markAsPrinted(receiptId: String) async throws -> MarkPrintedResponse {
 
-        // ── MOCK MODE ────────────────────────────────────────────────────
+#if DEBUG
         if AppConfig.mockMode {
             try? await Task.sleep(nanoseconds: 300_000_000)
-            print("[SquareAPIService] MOCK: marked \(receiptId) as printed")
             return MarkPrintedResponse(success: true, message: nil)
         }
-        // ────────────────────────────────────────────────────────────────
+#endif
 
         guard let url = URL(string: "\(AppConfig.backendBaseURL)\(AppConfig.receiptEndpoint)/mark-printed") else {
             throw SnapPrintError.invalidURL
