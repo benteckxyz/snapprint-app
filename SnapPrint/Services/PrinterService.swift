@@ -25,8 +25,8 @@ import UIKit
 // ------------------------------------------------------------------------
 
 // Uncomment sau khi thêm SPM packages:
-// import StarIO
-// import StarIO_Extension
+import StarIO
+import StarIO_Extension
 
 /// StarPRNT SDK wrapper cho Star mC-Print3 (USB-C trực tiếp từ iPad/iPhone).
 final class PrinterService: @unchecked Sendable {
@@ -63,51 +63,44 @@ final class PrinterService: @unchecked Sendable {
 #endif
 
         // ── STARPRNT SDK – USB-C Connection ─────────────────────────────
-        // Uncomment toàn bộ block dưới đây sau khi add SPM packages:
-        //
-        // // 1. Mở port USB-C
-        // guard let port = SMPort.getPort(
-        //     portName:         AppConfig.printerPortName,     // "USB:Star mC-Print3"
-        //     portSettings:     AppConfig.printerPortSettings, // ""
-        //     ioTimeoutMillis:  AppConfig.printerTimeout        // 10000
-        // ) else {
-        //     throw SnapPrintError.printerNotFound
-        // }
-        // defer { SMPort.release(port) }
-        //
-        // // 2. Build lệnh in ảnh (StarGraphic emulation cho ảnh bitmap)
-        // guard let builder = ISCBBuilder(emulation: StarIoExt.Emulation.StarGraphic) else {
-        //     throw SnapPrintError.printerError("Cannot create command builder")
-        // }
-        // builder.appendBitmap(
-        //     image,
-        //     diffusion: true,                               // Floyd-Steinberg trong SDK
-        //     width:     Int32(AppConfig.thermalPrintWidthPx), // 576px cho 80mm
-        //     bothScale: true
-        // )
-        // builder.appendCutPaper(.partial)                   // cắt giấy sau khi in
-        //
-        // // 3. Gửi lệnh đến máy in
-        // guard let commands = builder.commands else {
-        //     throw SnapPrintError.printerError("Empty command buffer")
-        // }
-        // var written: UInt32 = 0
-        // commands.bytes.withUnsafeBytes { ptr in
-        //     _ = port.write(
-        //         ptr.baseAddress?.assumingMemoryBound(to: UInt8.self),
-        //         size:                    UInt32(commands.length),
-        //         numberOfBytesWritten:    &written
-        //     )
-        // }
-        // guard written == UInt32(commands.length) else {
-        //     throw SnapPrintError.printerError("Print incomplete: wrote \(written)/\(commands.length) bytes")
-        // }
-        // ────────────────────────────────────────────────────────────────
+        // 1. Mở port USB-C
+        guard let port = SMPort.getPort(
+            portName:         AppConfig.printerPortName,     // "USB:Star mC-Print3"
+            portSettings:     AppConfig.printerPortSettings, // ""
+            ioTimeoutMillis:  AppConfig.printerTimeout        // 10000
+        ) else {
+            throw SnapPrintError.printerNotFound
+        }
+        defer { SMPort.release(port) }
 
-        throw SnapPrintError.printerError(
-            "StarIO SDK chưa được link.\n" +
-            "Xem hướng dẫn SPM ở đầu file PrinterService.swift"
+        // 2. Build lệnh in ảnh (StarGraphic emulation cho ảnh bitmap)
+        guard let builder = ISCBBuilder(emulation: StarIoExt.Emulation.StarGraphic) else {
+            throw SnapPrintError.printerError("Cannot create command builder")
+        }
+        builder.appendBitmap(
+            image,
+            diffusion: true,                               // Floyd-Steinberg trong SDK
+            width:     Int32(AppConfig.thermalPrintWidthPx), // 576px cho 80mm
+            bothScale: true
         )
+        builder.appendCutPaper(.partial)                   // cắt giấy sau khi in
+
+        // 3. Gửi lệnh đến máy in
+        guard let commands = builder.commands else {
+            throw SnapPrintError.printerError("Empty command buffer")
+        }
+        var written: UInt32 = 0
+        commands.bytes.withUnsafeBytes { ptr in
+            _ = port.write(
+                ptr.baseAddress?.assumingMemoryBound(to: UInt8.self),
+                size:                    UInt32(commands.length),
+                numberOfBytesWritten:    &written
+            )
+        }
+        guard written == UInt32(commands.length) else {
+            throw SnapPrintError.printerError("Print incomplete: wrote \(written)/\(commands.length) bytes")
+        }
+        // ────────────────────────────────────────────────────────────────
     }
 
     // MARK: - Discover USB Printer
@@ -127,20 +120,13 @@ final class PrinterService: @unchecked Sendable {
                 }
 #endif
 
-                // SDK (uncomment sau khi thêm StarIO):
-                //
-                // // Với USB, search theo "USB:" prefix
-                // let printerList = SMPort.searchPrinter(portType: "USB:") as? [[String: String]] ?? []
-                // let ports = printerList.compactMap { info -> PrinterPort? in
-                //     guard let portName = info["portName"] else { return nil }
-                //     return PrinterPort(name: portName, modelName: info["modelName"])
-                // }
-                // continuation.resume(returning: ports)
-
-                continuation.resume(returning: [
-                    PrinterPort(name: AppConfig.printerPortName,
-                                modelName: "Star mC-Print3 (mCP31Ci)")
-                ])
+                // Với USB, search theo "USB:" prefix
+                let printerList = SMPort.searchPrinter(portType: "USB:") as? [[String: String]] ?? []
+                let ports = printerList.compactMap { info -> PrinterPort? in
+                    guard let portName = info["portName"] else { return nil }
+                    return PrinterPort(name: portName, modelName: info["modelName"])
+                }
+                continuation.resume(returning: ports)
             }
         }
     }
