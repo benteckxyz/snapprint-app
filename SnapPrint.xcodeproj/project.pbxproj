@@ -22,6 +22,18 @@
 		E9AEDEC271D9467ABE698277 /* ReceiptEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B7CF4536E454D19A3D9C09A /* ReceiptEntryView.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		9AA29BD8300933E8009FC7EB /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		0E966EB8457F4FE2B7ED1194 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = SnapPrint/Resources/Assets.xcassets; sourceTree = SOURCE_ROOT; };
 		3B7CF4536E454D19A3D9C09A /* ReceiptEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiptEntryView.swift; sourceTree = "<group>"; };
@@ -145,6 +157,7 @@
 				5E5A537C7E194AEBB48ED83F /* Sources */,
 				7ABB83E317044F4CB93B8E9D /* Resources */,
 				322C7C332A3B4B70B9F39213 /* Frameworks */,
+				9AA29BD8300933E8009FC7EB /* CopyFiles */,
 			);
 			buildRules = (
 			);
