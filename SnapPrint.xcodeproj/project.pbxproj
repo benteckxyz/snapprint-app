@@ -14,13 +14,16 @@
 		5F4621346E5440A8BCFD123E /* PrinterService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2E3C6099BFC4DA4AF51A9E9 /* PrinterService.swift */; };
 		75746D74BA5D42ECBA77F0F6 /* CountdownOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E3CAF7E55B4AF09A8C96FA /* CountdownOverlay.swift */; };
 		7B4D335F918C458D9FDCFC75 /* SnapPrintApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D7504A50AEB431A936BD363 /* SnapPrintApp.swift */; };
+		7CBE09E356474ADF9BF49A7A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0E966EB8457F4FE2B7ED1194 /* Assets.xcassets */; };
+		9AA29BD430093199009FC7EB /* StarIO in Frameworks */ = {isa = PBXBuildFile; productRef = 9AA29BD330093199009FC7EB /* StarIO */; };
+		9AA29BD7300931BB009FC7EB /* StarIO_Extension in Frameworks */ = {isa = PBXBuildFile; productRef = 9AA29BD6300931BB009FC7EB /* StarIO_Extension */; };
 		C10E6CC9C50549979D0DCD7A /* CameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8375C968AB674F918D0D038F /* CameraView.swift */; };
 		E4F009925DF2447F868C7024 /* SquareAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C3864567C80490C8844E05D /* SquareAPIService.swift */; };
 		E9AEDEC271D9467ABE698277 /* ReceiptEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B7CF4536E454D19A3D9C09A /* ReceiptEntryView.swift */; };
-		7CBE09E356474ADF9BF49A7A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0E966EB8457F4FE2B7ED1194 /* Assets.xcassets */; };
-		/* End PBXBuildFile section */
+/* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0E966EB8457F4FE2B7ED1194 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = SnapPrint/Resources/Assets.xcassets; sourceTree = SOURCE_ROOT; };
 		3B7CF4536E454D19A3D9C09A /* ReceiptEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiptEntryView.swift; sourceTree = "<group>"; };
 		59A5F2FFCCD841B19C73A001 /* SnapPrint.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SnapPrint.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5A38E76A60464A509456AAD3 /* PhotoPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoPreviewView.swift; sourceTree = "<group>"; };
@@ -33,14 +36,15 @@
 		CDC3937C22C747B6996D0188 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D4E3CAF7E55B4AF09A8C96FA /* CountdownOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountdownOverlay.swift; sourceTree = "<group>"; };
 		F2E3C6099BFC4DA4AF51A9E9 /* PrinterService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrinterService.swift; sourceTree = "<group>"; };
-		0E966EB8457F4FE2B7ED1194 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = SnapPrint/Resources/Assets.xcassets; sourceTree = SOURCE_ROOT; };
-		/* End PBXFileReference section */
+/* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		322C7C332A3B4B70B9F39213 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9AA29BD7300931BB009FC7EB /* StarIO_Extension in Frameworks */,
+				9AA29BD430093199009FC7EB /* StarIO in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -175,6 +179,10 @@
 				Base,
 			);
 			mainGroup = 47AFED5F104349BAA18BBBB6 /* SnapPrint */;
+			packageReferences = (
+				9AA29BD230093199009FC7EB /* XCRemoteSwiftPackageReference "stario-ios" */,
+				9AA29BD5300931BB009FC7EB /* XCRemoteSwiftPackageReference "stario-extension-ios" */,
+			);
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -218,8 +226,8 @@
 		35CF170760C747C78E327942 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
@@ -267,8 +275,8 @@
 		F1183847C72348BBB031B2D9 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				DEBUG_INFORMATION_FORMAT = dwarf;
@@ -310,6 +318,38 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		9AA29BD230093199009FC7EB /* XCRemoteSwiftPackageReference "stario-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/star-micronics/stario-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.12.3;
+			};
+		};
+		9AA29BD5300931BB009FC7EB /* XCRemoteSwiftPackageReference "stario-extension-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/star-micronics/stario-extension-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.19.3;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		9AA29BD330093199009FC7EB /* StarIO */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9AA29BD230093199009FC7EB /* XCRemoteSwiftPackageReference "stario-ios" */;
+			productName = StarIO;
+		};
+		9AA29BD6300931BB009FC7EB /* StarIO_Extension */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9AA29BD5300931BB009FC7EB /* XCRemoteSwiftPackageReference "stario-extension-ios" */;
+			productName = StarIO_Extension;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 40D27FF192C94FC285A0AC47 /* Project object */;
 }

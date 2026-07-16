@@ -121,7 +121,7 @@ final class PrinterService: @unchecked Sendable {
 #endif
 
                 // Với USB, search theo "USB:" prefix
-                let printerList = SMPort.searchPrinter(target: "USB:") as? [PortInfo] ?? []
+                let printerList = (try? SMPort.searchPrinter(target: "USB:")) as? [PortInfo] ?? []
                 let ports = printerList.compactMap { info -> PrinterPort? in
                     return PrinterPort(name: info.portName, modelName: info.modelName)
                 }
