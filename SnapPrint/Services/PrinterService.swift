@@ -64,14 +64,12 @@ final class PrinterService: @unchecked Sendable {
 
         // ── STARPRNT SDK – USB-C Connection ─────────────────────────────
         // 1. Mở port USB-C
-        guard let port = try SMPort.getPort(
+        let port = try SMPort.getPort(
             portName:         AppConfig.printerPortName,     // "USB:Star mC-Print3"
             portSettings:     AppConfig.printerPortSettings, // ""
             ioTimeoutMillis:  AppConfig.printerTimeout        // 10000
-        ) else {
-            throw SnapPrintError.printerNotFound
-        }
-        defer { try? SMPort.release(port) }
+        )
+        defer { SMPort.release(port) }
 
         // 2. Build lệnh in ảnh (StarGraphic emulation cho ảnh bitmap)
         guard let builder = StarIoExt.createCommandBuilder(StarIoExtEmulation.starGraphic) else {
