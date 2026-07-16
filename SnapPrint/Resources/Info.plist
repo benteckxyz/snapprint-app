@@ -52,11 +52,15 @@
 	<key>NSCameraUsageDescription</key>
 	<string>SnapPrint uses the camera to take photos for thermal printing.</string>
 
-	<!-- ─── USB-C MFi (Star mC-Print3) ─────────────────── -->
+
+	<!-- ─── USB-C MFi (Star mC-Print3) ───────────────────
+	     Commented out for Personal/Free Apple Developer accounts to prevent dyld launch/install errors.
+	     Uncomment this block when building with a Paid Developer Account for Production.
 	<key>UISupportedExternalAccessoryProtocols</key>
 	<array>
 		<string>jp.star-m.stario.StarIoExtPort</string>
 	</array>
+	-->
 
 	<!-- ─── Local Network ───────────────────────────────── -->
 	<key>NSLocalNetworkUsageDescription</key>
