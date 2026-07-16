@@ -81,7 +81,7 @@ final class PrinterService: @unchecked Sendable {
         builder.appendBitmap(
             image,
             diffusion: true,                               // Floyd-Steinberg trong SDK
-            width:     Int32(AppConfig.thermalPrintWidthPx), // 576px cho 80mm
+            width:     Int(AppConfig.thermalPrintWidthPx),  // Swift Package expects Int
             bothScale: true
         )
         builder.appendCutPaper(SCBCutPaperAction.partialCut)  // cắt giấy sau khi in
@@ -92,14 +92,13 @@ final class PrinterService: @unchecked Sendable {
             throw SnapPrintError.printerError("Empty command buffer")
         }
         var written: UInt32 = 0
-        commands.bytes.withUnsafeBytes { ptr in
-            _ = try? port.write(
-                writeBuffer:          ptr.baseAddress?.assumingMemoryBound(to: UInt8.self),
-                offset:               0,
-                size:                 UInt32(commands.length),
-                numberOfBytesWritten: &written
-            )
-        }
+        let bytePointer = commands.bytes.assumingMemoryBound(to: UInt8.self)
+        _ = try port.write(
+            writeBuffer:          bytePointer,
+            offset:               0,
+            size:                 UInt32(commands.length),
+            numberOfBytesWritten: &written
+        )
         guard written == UInt32(commands.length) else {
             throw SnapPrintError.printerError("Print incomplete: wrote \(written)/\(commands.length) bytes")
         }
