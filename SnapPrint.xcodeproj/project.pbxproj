@@ -17,6 +17,8 @@
 		7CBE09E356474ADF9BF49A7A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0E966EB8457F4FE2B7ED1194 /* Assets.xcassets */; };
 		9AA29BD430093199009FC7EB /* StarIO in Frameworks */ = {isa = PBXBuildFile; productRef = 9AA29BD330093199009FC7EB /* StarIO */; };
 		9AA29BD7300931BB009FC7EB /* StarIO_Extension in Frameworks */ = {isa = PBXBuildFile; productRef = 9AA29BD6300931BB009FC7EB /* StarIO_Extension */; };
+		9AA29BD9300933E9009FC7EB /* StarIO in CopyFiles */ = {isa = PBXBuildFile; productRef = 9AA29BD330093199009FC7EB /* StarIO */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		9AA29BDA300933EA009FC7EB /* StarIO_Extension in CopyFiles */ = {isa = PBXBuildFile; productRef = 9AA29BD6300931BB009FC7EB /* StarIO_Extension */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		C10E6CC9C50549979D0DCD7A /* CameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8375C968AB674F918D0D038F /* CameraView.swift */; };
 		E4F009925DF2447F868C7024 /* SquareAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C3864567C80490C8844E05D /* SquareAPIService.swift */; };
 		E9AEDEC271D9467ABE698277 /* ReceiptEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B7CF4536E454D19A3D9C09A /* ReceiptEntryView.swift */; };
@@ -29,6 +31,8 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
+				9AA29BD9300933E9009FC7EB /* StarIO in CopyFiles */,
+				9AA29BDA300933EA009FC7EB /* StarIO_Extension in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
