@@ -55,6 +55,32 @@ enum AppConfig {
         set { UserDefaults.standard.set(newValue, forKey: "snapprint_footerLine2") }
     }
 
+    /// Frame style templates for printed photos
+    enum FrameStyle: String, CaseIterable, Identifiable {
+        case standard = "Standard"
+        case rounded  = "Modern Rounded"
+        case vintage  = "Vintage Stamp"
+
+        var id: String { rawValue }
+
+        var description: String {
+            switch self {
+            case .standard: return "Classic photo layout with solid divider"
+            case .rounded:  return "Rounded photo corners with double divider"
+            case .vintage:  return "Inner border with dashed divider line"
+            }
+        }
+    }
+
+    /// Currently selected frame style
+    static var frameStyle: FrameStyle {
+        get {
+            let raw = UserDefaults.standard.string(forKey: "snapprint_frameStyle") ?? FrameStyle.standard.rawValue
+            return FrameStyle(rawValue: raw) ?? .standard
+        }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: "snapprint_frameStyle") }
+    }
+
     // MARK: - Camera
 
     static let countdownSeconds = 3

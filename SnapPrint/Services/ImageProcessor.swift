@@ -119,13 +119,17 @@ final class ImageProcessor {
 
     // MARK: - Step 0: Compose Layout
 
-    /// Builds the print canvas: photo on top, branded footer below.
+    /// Builds the print canvas with selected frame template (Standard, Rounded, or Vintage).
     func composeLayout(photo: UIImage) -> UIImage {
         let printWidth  = AppConfig.thermalPrintWidthPx
         let scale: CGFloat = 1                          // 1x — we work in print pixels
+        let frameStyle = AppConfig.frameStyle
 
-        // Photo height maintains aspect ratio
-        let photoHeight = photo.size.height / photo.size.width * printWidth
+        // Canvas dimensions & layout margins depending on frame style
+        let sideMargin: CGFloat = (frameStyle == .rounded || frameStyle == .vintage) ? 16 : 0
+        let topMargin: CGFloat  = (frameStyle == .rounded || frameStyle == .vintage) ? 16 : 0
+        let photoRenderWidth    = printWidth - (sideMargin * 2)
+        let photoHeight         = photo.size.height / photo.size.width * photoRenderWidth
 
         // Footer metrics
         let footerPadTop:    CGFloat = 20
@@ -140,7 +144,7 @@ final class ImageProcessor {
         let footerH   = footerPadTop + dividerHeight + 14
                       + titleH + lineSpacing + subtitleH + footerPadBottom
 
-        let totalH = photoHeight + footerH
+        let totalH = topMargin + photoHeight + footerH
 
         let renderer = UIGraphicsImageRenderer(
             size: CGSize(width: printWidth, height: totalH),
@@ -159,14 +163,71 @@ final class ImageProcessor {
             UIColor.white.setFill()
             ctx.fill(bounds)
 
-            // ── Photo ─────────────────────────────────────────────────────
-            let photoRect = CGRect(x: 0, y: 0, width: printWidth, height: photoHeight)
-            photo.draw(in: photoRect)
+            let photoRect = CGRect(x: sideMargin, y: topMargin, width: photoRenderWidth, height: photoHeight)
 
-            // ── Divider line ──────────────────────────────────────────────
-            let dividerY = photoHeight + footerPadTop
-            UIColor.black.withAlphaComponent(0.5).setFill()
-            ctx.fill(CGRect(x: 20, y: dividerY, width: printWidth - 40, height: dividerHeight))
+            // ── Photo Drawing (per Frame Style) ───────────────────────────
+            switch frameStyle {
+            case .standard:
+                // Standard: Full-width square-edge photo
+                photo.draw(in: photoRect)
+
+            case .rounded:
+                // Modern Rounded: Photo with 20px rounded corners & subtle border
+                let clipPath = UIBezierPath(roundedRect: photoRect, cornerRadius: 20)
+                ctx.cgContext.saveGState()
+                clipPath.addClip()
+                photo.draw(in: photoRect)
+                ctx.cgContext.restoreGState()
+
+                // Outline border
+                UIColor.black.withAlphaComponent(0.6).setStroke()
+                clipPath.lineWidth = 2
+                clipPath.stroke()
+
+            case .vintage:
+                // Vintage: Polaroid Inner Frame (white margin + thin black inner line)
+                photo.draw(in: photoRect)
+
+                // Outer border around photo
+                let outerBorder = UIBezierPath(rect: photoRect)
+                UIColor.black.setStroke()
+                outerBorder.lineWidth = 2
+                outerBorder.stroke()
+
+                // Inner inset line
+                let innerRect = photoRect.insetBy(dx: 6, dy: 6)
+                let innerBorder = UIBezierPath(rect: innerRect)
+                UIColor.white.withAlphaComponent(0.8).setStroke()
+                innerBorder.lineWidth = 1.5
+                innerBorder.stroke()
+            }
+
+            // ── Divider Line (per Frame Style) ────────────────────────────
+            let dividerY = topMargin + photoHeight + footerPadTop
+
+            switch frameStyle {
+            case .standard:
+                // Single solid line
+                UIColor.black.withAlphaComponent(0.6).setFill()
+                ctx.fill(CGRect(x: 24, y: dividerY, width: printWidth - 48, height: 1.5))
+
+            case .rounded:
+                // Double line divider
+                UIColor.black.withAlphaComponent(0.7).setFill()
+                ctx.fill(CGRect(x: 32, y: dividerY - 2, width: printWidth - 64, height: 1))
+                ctx.fill(CGRect(x: 48, y: dividerY + 3, width: printWidth - 96, height: 1))
+
+            case .vintage:
+                // Dashed line divider
+                let dashPath = UIBezierPath()
+                dashPath.move(to: CGPoint(x: 24, y: dividerY))
+                dashPath.addLine(to: CGPoint(x: printWidth - 24, y: dividerY))
+                let dashes: [CGFloat] = [6, 4]
+                dashPath.setLineDash(dashes, count: dashes.count, phase: 0)
+                dashPath.lineWidth = 1.5
+                UIColor.black.withAlphaComponent(0.7).setStroke()
+                dashPath.stroke()
+            }
 
             // ── Footer text ───────────────────────────────────────────────
             let textX: CGFloat = 0

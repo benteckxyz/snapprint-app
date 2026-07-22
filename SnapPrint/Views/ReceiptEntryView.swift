@@ -296,6 +296,7 @@ struct AdminSettingsView: View {
     @State private var beastMode   = AppConfig.beastMode
     @State private var footerLine1 = AppConfig.footerLine1
     @State private var footerLine2 = AppConfig.footerLine2
+    @State private var selectedFrameStyle = AppConfig.frameStyle
 
     // Discovery State
     @State private var discoveredPrinters: [PortInfo] = []
@@ -312,6 +313,19 @@ struct AdminSettingsView: View {
                 Section("Mode Configuration") {
                     Toggle("Beast Mode", isOn: $beastMode)
                     Text("If enabled, the app skips receipt code verification and goes straight to the camera screen.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Section("Print Frame Template") {
+                    Picker("Template Style", selection: $selectedFrameStyle) {
+                        ForEach(AppConfig.FrameStyle.allCases) { style in
+                            Text(style.rawValue).tag(style)
+                        }
+                    }
+                    .pickerStyle(.menu)
+
+                    Text(selectedFrameStyle.description)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -449,6 +463,7 @@ struct AdminSettingsView: View {
                         AppConfig.beastMode       = beastMode
                         AppConfig.footerLine1     = footerLine1
                         AppConfig.footerLine2     = footerLine2
+                        AppConfig.frameStyle      = selectedFrameStyle
                         dismiss()
                     }
                     .fontWeight(.bold)
