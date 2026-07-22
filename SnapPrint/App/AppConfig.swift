@@ -60,6 +60,7 @@ enum AppConfig {
         case standard = "Standard"
         case rounded  = "Modern Rounded"
         case vintage  = "Vintage Stamp"
+        case sawtooth = "Sawtooth Frame"
 
         var id: String { rawValue }
 
@@ -68,6 +69,7 @@ enum AppConfig {
             case .standard: return "Classic photo layout with solid divider"
             case .rounded:  return "Rounded photo corners with double divider"
             case .vintage:  return "Inner border with dashed divider line"
+            case .sawtooth: return "Serrated picture frame with decorative teeth border"
             }
         }
     }

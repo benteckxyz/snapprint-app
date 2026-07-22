@@ -200,6 +200,19 @@ final class ImageProcessor {
                 UIColor.white.withAlphaComponent(0.8).setStroke()
                 innerBorder.lineWidth = 1.5
                 innerBorder.stroke()
+
+            case .sawtooth:
+                // Sawtooth Frame: Serrated picture frame border
+                let sawtoothPath = createSawtoothPath(rect: photoRect, toothSize: 16, toothDepth: 6)
+                ctx.cgContext.saveGState()
+                sawtoothPath.addClip()
+                photo.draw(in: photoRect)
+                ctx.cgContext.restoreGState()
+
+                // Outline border for teeth
+                UIColor.black.setStroke()
+                sawtoothPath.lineWidth = 2
+                sawtoothPath.stroke()
             }
 
             // ── Divider Line (per Frame Style) ────────────────────────────
@@ -226,6 +239,17 @@ final class ImageProcessor {
                 dashPath.setLineDash(dashes, count: dashes.count, phase: 0)
                 dashPath.lineWidth = 1.5
                 UIColor.black.withAlphaComponent(0.7).setStroke()
+                dashPath.stroke()
+
+            case .sawtooth:
+                // Decorative ornament line (dot-dash pattern)
+                let dashPath = UIBezierPath()
+                dashPath.move(to: CGPoint(x: 24, y: dividerY))
+                dashPath.addLine(to: CGPoint(x: printWidth - 24, y: dividerY))
+                let dashes: [CGFloat] = [10, 4, 3, 4]
+                dashPath.setLineDash(dashes, count: dashes.count, phase: 0)
+                dashPath.lineWidth = 1.5
+                UIColor.black.withAlphaComponent(0.8).setStroke()
                 dashPath.stroke()
             }
 
@@ -266,6 +290,64 @@ final class ImageProcessor {
                 )
             }
         }
+    }
+
+    /// Generates a serrated sawtooth path around a rectangle (like a postage stamp or picture frame).
+    private func createSawtoothPath(rect: CGRect, toothSize: CGFloat = 16, toothDepth: CGFloat = 6) -> UIBezierPath {
+        let path = UIBezierPath()
+
+        let left   = rect.minX
+        let right  = rect.maxX
+        let top    = rect.minY
+        let bottom = rect.maxY
+
+        let width  = rect.width
+        let height = rect.height
+
+        let numTeethX = max(1, Int(width / toothSize))
+        let stepX     = width / CGFloat(numTeethX)
+
+        let numTeethY = max(1, Int(height / toothSize))
+        let stepY     = height / CGFloat(numTeethY)
+
+        path.move(to: CGPoint(x: left, y: top))
+
+        // Top edge
+        for i in 0..<numTeethX {
+            let startX = left + CGFloat(i) * stepX
+            let midX   = startX + stepX / 2.0
+            let endX   = startX + stepX
+            path.addLine(to: CGPoint(x: midX, y: top + toothDepth))
+            path.addLine(to: CGPoint(x: endX, y: top))
+        }
+
+        // Right edge
+        for i in 0..<numTeethY {
+            let startY = top + CGFloat(i) * stepY
+            let midY   = startY + stepY / 2.0
+            let endY   = startY + stepY
+            path.addLine(to: CGPoint(x: right - toothDepth, y: midY))
+            path.addLine(to: CGPoint(x: right, y: endY))
+        }
+
+        // Bottom edge
+        for i in (0..<numTeethX).reversed() {
+            let startX = left + CGFloat(i) * stepX
+            let midX   = startX + stepX / 2.0
+            path.addLine(to: CGPoint(x: midX, y: bottom - toothDepth))
+            path.addLine(to: CGPoint(x: startX, y: bottom))
+        }
+
+        // Left edge
+        for i in (0..<numTeethY).reversed() {
+            let startY = top + CGFloat(i) * stepY
+            let midY   = startY + stepY / 2.0
+            path.addLine(to: CGPoint(x: left + toothDepth, y: midY))
+            path.addLine(to: CGPoint(x: left, y: startY))
+        }
+
+        path.close()
+        return path
     }
 
     // MARK: - Step 1: Resize
