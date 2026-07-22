@@ -35,27 +35,40 @@ final class ImageProcessor {
     private let preDitherBlur:   Float = 1.8    // Gaussian blur before dither → much less grain
     private let ditherThreshold: Float = 0.65   // higher → more white pixels → less grain density
 
-    /// Compose layout (photo + footer) then optimise for thermal printing.
+    // MARK: - Print Layout
+    // mC-Print3: 72mm printable = 576 dots @ 203 DPI
+
+    /// Tạo 1 tấm hình hoàn chỉnh cho in thermal:
+    /// 1) Nướng sạch EXIF orientation & crop transform
+    /// 2) Downsample về 576px wide (scale = 1.0)
+    /// 3) B&W dither (grayscale → tone curve → sharpen → blur → Floyd-Steinberg dither)
+    /// 4) Ghép ảnh B&W đã dither + footer text → 1 UIImage duy nhất
     func processForThermalPrint(_ sourceImage: UIImage) -> UIImage? {
-        // Step 0: Compose print layout
-        let composed = composeLayout(photo: fixOrientation(sourceImage))
+        let printWidth = AppConfig.thermalPrintWidthPx  // 576.0
 
-        guard let cgImage = composed.cgImage else { return nil }
+        // Step 1: Always fix orientation & strip embedded transform
+        let oriented = fixOrientation(sourceImage)
 
-        // Step 1: Resize to printer width
-        let targetWidth  = Int(AppConfig.thermalPrintWidthPx)
-        let aspectRatio  = CGFloat(cgImage.height) / CGFloat(cgImage.width)
-        let targetHeight = Int(CGFloat(targetWidth) * aspectRatio)
+        // Step 2: Downsample photo to exactly 576px wide (scale 1.0)
+        let scaled = downsample(oriented, maxWidth: printWidth)
 
-        guard let resized  = resize(cgImage: cgImage, width: targetWidth, height: targetHeight),
-              let gray     = toGrayscale(cgImage: resized),
+        // Step 3: Extract CGImage for thermal enhancement & dithering
+        guard let cgImage = scaled.cgImage else { return nil }
+
+        // Step 4: Xử lý ảnh cho giấy nhiệt (grayscale → tone → sharpen → blur → dither)
+        guard let gray     = toGrayscale(cgImage: cgImage),
               let lifted   = liftToneCurve(cgImage: gray),
               let enhanced = applyThermalEnhancement(cgImage: lifted),
-              let blurred  = applyPreDitherBlur(cgImage: enhanced),   // ← reduces grain
+              let blurred  = applyPreDitherBlur(cgImage: enhanced),
               let dithered = floydSteinbergDither(cgImage: blurred)
         else { return nil }
 
-        return UIImage(cgImage: dithered)
+        // Step 5: Ghép ảnh B&W đã dither + footer text → 1 tấm hình hoàn chỉnh
+        let processedPhoto = UIImage(cgImage: dithered, scale: 1.0, orientation: .up)
+        let finalImage = composeLayout(photo: processedPhoto)
+
+        print("DEBUG: Final print image size: \(finalImage.size.width)×\(finalImage.size.height)pt, scale=\(finalImage.scale)")
+        return finalImage
     }
 
     /// B&W-process the raw photo only (no layout compose).
@@ -71,25 +84,37 @@ final class ImageProcessor {
         return UIImage(cgImage: sharp)
     }
 
-    /// Redraws the image through UIKit so orientation metadata is baked in.
-    /// Without this, UIImage→CGImage loses EXIF rotation and the image appears rotated.
+    /// Redraws the image through UIKit so orientation metadata is baked into pixels.
+    /// Uses image.scale so full pixel resolution of the photo is preserved.
     private func fixOrientation(_ image: UIImage) -> UIImage {
         guard image.imageOrientation != .up else { return image }
-        let renderer = UIGraphicsImageRenderer(size: image.size)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = image.scale
+        format.opaque = true
+        let renderer = UIGraphicsImageRenderer(size: image.size, format: format)
         return renderer.image { _ in image.draw(in: CGRect(origin: .zero, size: image.size)) }
     }
 
-    /// Public wrapper so callers (e.g. view .task) can fix orientation before passing image in.
+    /// Public wrapper so callers can fix orientation if needed.
     func fixOrientationPublic(_ image: UIImage) -> UIImage { fixOrientation(image) }
 
-    /// Downsample image to maxWidth — drastically reduces memory for preview processing.
-    /// A 12MP iPhone photo (4032px wide) → 800px wide = ~96% less memory.
+    /// Downsamples image to target pixel width (e.g. 576px) maintaining aspect ratio.
+    /// Produces a clean 1.0 scale UIImage where 1 pt = 1 pixel.
     func downsample(_ image: UIImage, maxWidth: CGFloat) -> UIImage {
-        guard image.size.width > maxWidth else { return image }
-        let scale  = maxWidth / image.size.width
-        let newSize = CGSize(width: maxWidth, height: image.size.height * scale)
-        let renderer = UIGraphicsImageRenderer(size: newSize)
-        return renderer.image { _ in image.draw(in: CGRect(origin: .zero, size: newSize)) }
+        let pixelW = CGFloat(image.cgImage?.width ?? Int(image.size.width * image.scale))
+        let pixelH = CGFloat(image.cgImage?.height ?? Int(image.size.height * image.scale))
+
+        guard pixelW > 0 else { return image }
+        let aspect = pixelH / pixelW
+        let targetPixelSize = CGSize(width: maxWidth, height: maxWidth * aspect)
+
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1.0  // 1pt = 1px
+        format.opaque = true
+        let renderer = UIGraphicsImageRenderer(size: targetPixelSize, format: format)
+        return renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: targetPixelSize))
+        }
     }
 
     // MARK: - Step 0: Compose Layout
@@ -147,72 +172,51 @@ final class ImageProcessor {
             let textX: CGFloat = 0
             var textY = dividerY + dividerHeight + 14
 
-            // "Thanks for using"
-            let line1 = "Thanks for using"
-            let para1 = NSMutableParagraphStyle()
-            para1.alignment = .center
-            let attrs1: [NSAttributedString.Key: Any] = [
-                .font:            UIFont.systemFont(ofSize: titleSize, weight: .regular),
-                .foregroundColor: UIColor.black,
-                .paragraphStyle:  para1
-            ]
-            (line1 as NSString).draw(
-                in: CGRect(x: textX, y: textY, width: printWidth, height: titleH + 4),
-                withAttributes: attrs1
-            )
-            textY += titleH + lineSpacing
+            // Footer Line 1 (configurable)
+            let line1 = AppConfig.footerLine1
+            if !line1.isEmpty {
+                let para1 = NSMutableParagraphStyle()
+                para1.alignment = .center
+                let attrs1: [NSAttributedString.Key: Any] = [
+                    .font:            UIFont.systemFont(ofSize: titleSize, weight: .regular),
+                    .foregroundColor: UIColor.black,
+                    .paragraphStyle:  para1
+                ]
+                (line1 as NSString).draw(
+                    in: CGRect(x: textX, y: textY, width: printWidth, height: titleH + 4),
+                    withAttributes: attrs1
+                )
+                textY += titleH + lineSpacing
+            }
 
-            // "SnapPrint" — bold accent
-            let line2 = "SnapPrint ✦"
-            let para2 = NSMutableParagraphStyle()
-            para2.alignment = .center
-            let attrs2: [NSAttributedString.Key: Any] = [
-                .font:            UIFont.systemFont(ofSize: subtitleSize, weight: .bold),
-                .foregroundColor: UIColor.black,
-                .paragraphStyle:  para2
-            ]
-            (line2 as NSString).draw(
-                in: CGRect(x: textX, y: textY, width: printWidth, height: subtitleH + 4),
-                withAttributes: attrs2
-            )
+            // Footer Line 2 (configurable)
+            let line2 = AppConfig.footerLine2
+            if !line2.isEmpty {
+                let para2 = NSMutableParagraphStyle()
+                para2.alignment = .center
+                let attrs2: [NSAttributedString.Key: Any] = [
+                    .font:            UIFont.systemFont(ofSize: subtitleSize, weight: .bold),
+                    .foregroundColor: UIColor.black,
+                    .paragraphStyle:  para2
+                ]
+                (line2 as NSString).draw(
+                    in: CGRect(x: textX, y: textY, width: printWidth, height: subtitleH + 4),
+                    withAttributes: attrs2
+                )
+            }
         }
     }
 
     // MARK: - Step 1: Resize
 
-    private func resize(cgImage: CGImage, width: Int, height: Int) -> CGImage? {
-        var sourceBuffer      = vImage_Buffer()
-        var destinationBuffer = vImage_Buffer()
-
-        defer {
-            sourceBuffer.data?.deallocate()
-            destinationBuffer.data?.deallocate()
+    private func resizeImage(_ image: UIImage, targetSize: CGSize) -> UIImage {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1.0  // 1pt = 1px (576px)
+        format.opaque = true
+        let renderer = UIGraphicsImageRenderer(size: targetSize, format: format)
+        return renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: targetSize))
         }
-
-        var format = vImage_CGImageFormat(
-            bitsPerComponent: 8,
-            bitsPerPixel: 32,
-            colorSpace: Unmanaged.passUnretained(CGColorSpaceCreateDeviceRGB()),
-            bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.first.rawValue),
-            version: 0,
-            decode: nil,
-            renderingIntent: .defaultIntent
-        )
-
-        var error = vImageBuffer_InitWithCGImage(&sourceBuffer, &format, nil, cgImage, vImage_Flags(kvImageNoFlags))
-        guard error == kvImageNoError else { return nil }
-
-        error = vImageBuffer_Init(&destinationBuffer,
-                                  vImagePixelCount(height),
-                                  vImagePixelCount(width),
-                                  32,
-                                  vImage_Flags(kvImageNoFlags))
-        guard error == kvImageNoError else { return nil }
-
-        error = vImageScale_ARGB8888(&sourceBuffer, &destinationBuffer, nil, vImage_Flags(kvImageHighQualityResampling))
-        guard error == kvImageNoError else { return nil }
-
-        return vImageCreateCGImageFromBuffer(&destinationBuffer, &format, nil, nil, vImage_Flags(kvImageNoFlags), nil)?.takeRetainedValue()
     }
 
     // MARK: - Step 2: Grayscale
@@ -286,17 +290,29 @@ final class ImageProcessor {
     // MARK: - Step 4: Floyd-Steinberg Dithering
 
     private func floydSteinbergDither(cgImage: CGImage) -> CGImage? {
-        let width       = cgImage.width
-        let height      = cgImage.height
-        let bytesPerRow = width
+        let width  = cgImage.width
+        let height = cgImage.height
 
-        guard let dataProvider = cgImage.dataProvider,
-              let data         = dataProvider.data,
-              let srcBytes     = CFDataGetBytePtr(data) else { return nil }
+        // 1. Render cgImage into a contiguous 8-bit DeviceGray buffer (1 byte per pixel)
+        // CoreImage outputs 32-bit ARGB CGImages; rendering into Gray CGContext guarantees 1 byte/pixel
+        var srcPixels = [UInt8](repeating: 0, count: width * height)
+        let colorSpace = CGColorSpaceCreateDeviceGray()
+        guard let drawCtx = CGContext(
+            data: &srcPixels,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: width,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.none.rawValue
+        ) else { return nil }
 
+        drawCtx.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+
+        // 2. Convert to Float array for error diffusion
         var pixels = [Float](repeating: 0, count: width * height)
         for i in 0 ..< width * height {
-            pixels[i] = Float(srcBytes[i]) / 255.0
+            pixels[i] = Float(srcPixels[i]) / 255.0
         }
 
         var output = [UInt8](repeating: 0, count: width * height)
@@ -305,29 +321,28 @@ final class ImageProcessor {
             for x in 0 ..< width {
                 let idx = y * width + x
                 let old = pixels[idx]
-                let new: Float = old > ditherThreshold ? 1.0 : 0.0   // tuned threshold
+                let new: Float = old > ditherThreshold ? 1.0 : 0.0
                 output[idx] = new > 0.5 ? 255 : 0
                 let err = old - new
 
-                if x + 1 < width                      { pixels[idx + 1]         += err * (7.0 / 16.0) }
+                if x + 1 < width                  { pixels[idx + 1]         += err * (7.0 / 16.0) }
                 if y + 1 < height {
-                    if x > 0                           { pixels[idx + width - 1] += err * (3.0 / 16.0) }
-                                                         pixels[idx + width]     += err * (5.0 / 16.0)
-                    if x + 1 < width                  { pixels[idx + width + 1] += err * (1.0 / 16.0) }
+                    if x > 0                       { pixels[idx + width - 1] += err * (3.0 / 16.0) }
+                                                     pixels[idx + width]     += err * (5.0 / 16.0)
+                    if x + 1 < width              { pixels[idx + width + 1] += err * (1.0 / 16.0) }
                 }
             }
         }
 
-        let colorSpace = CGColorSpaceCreateDeviceGray()
-        guard let ctx = CGContext(
+        guard let outCtx = CGContext(
             data: &output,
             width: width,
             height: height,
             bitsPerComponent: 8,
-            bytesPerRow: bytesPerRow,
+            bytesPerRow: width,
             space: colorSpace,
             bitmapInfo: CGImageAlphaInfo.none.rawValue
         ) else { return nil }
-        return ctx.makeImage()
+        return outCtx.makeImage()
     }
 }

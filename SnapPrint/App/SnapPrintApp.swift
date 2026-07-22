@@ -44,21 +44,35 @@ struct SnapPrintApp: App {
 
 struct RootView: View {
     @EnvironmentObject var router: AppRouter
+    @AppStorage("snapprint_beastMode") private var beastMode = false
 
     var body: some View {
         NavigationStack(path: $router.path) {
-            ReceiptEntryView()
-                .navigationDestination(for: AppDestination.self) { destination in
-                    switch destination {
-                    case .camera(let receiptId):
-                        CameraView(receiptId: receiptId)
-
-                    case .photoPreview(let receiptId):
-                        if let image = router.capturedImage {
-                            PhotoPreviewView(image: image, receiptId: receiptId)
+            if beastMode {
+                CameraView(receiptId: "BEAST_MODE")
+                    .navigationDestination(for: AppDestination.self) { destination in
+                        switch destination {
+                        case .camera(let receiptId):
+                            CameraView(receiptId: receiptId)
+                        case .photoPreview(let receiptId):
+                            if let image = router.capturedImage {
+                                PhotoPreviewView(image: image, receiptId: receiptId)
+                            }
                         }
                     }
-                }
+            } else {
+                ReceiptEntryView()
+                    .navigationDestination(for: AppDestination.self) { destination in
+                        switch destination {
+                        case .camera(let receiptId):
+                            CameraView(receiptId: receiptId)
+                        case .photoPreview(let receiptId):
+                            if let image = router.capturedImage {
+                                PhotoPreviewView(image: image, receiptId: receiptId)
+                            }
+                        }
+                    }
+            }
         }
         .preferredColorScheme(.dark)
     }

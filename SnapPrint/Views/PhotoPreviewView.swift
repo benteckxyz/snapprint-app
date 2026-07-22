@@ -36,14 +36,13 @@ struct PhotoPreviewView: View {
         .onAppear { viewModel.image = image }
         .task {
             let raw = image
-            let result: UIImage = await Task.detached(priority: .userInitiated) {
-                let oriented = ImageProcessor.shared.fixOrientationPublic(raw)
-                let small    = ImageProcessor.shared.downsample(oriented, maxWidth: 800)
-                let bw       = ImageProcessor.shared.processPhotoForPreview(small)
-                return ImageProcessor.shared.composeLayout(photo: bw)
+            let result = await Task.detached(priority: .userInitiated) {
+                ImageProcessor.shared.processForThermalPrint(raw)
             }.value
-            withAnimation(.easeIn(duration: 0.35)) {
-                composedPreview = result
+            if let result = result {
+                withAnimation(.easeIn(duration: 0.35)) {
+                    composedPreview = result
+                }
             }
         }
         .alert("Print Error", isPresented: $viewModel.showError) {
@@ -86,9 +85,25 @@ struct PhotoPreviewView: View {
 
     private var photoFrame: some View {
         GeometryReader { geo in
-            let hPad: CGFloat = 24
-            let frameWidth    = geo.size.width - hPad * 2
-            let frameHeight   = frameWidth * 1.42
+            let availableWidth  = geo.size.width - 48
+            let availableHeight = geo.size.height - 16
+            let aspectRatio: CGFloat = 1.42
+
+            // Dynamic aspect-fit size calculation to prevent overflowing screens on iPad
+            let size: CGSize = {
+                if availableWidth * aspectRatio > availableHeight {
+                    let h = availableHeight
+                    let w = h / aspectRatio
+                    return CGSize(width: w, height: h)
+                } else {
+                    let w = availableWidth
+                    let h = w * aspectRatio
+                    return CGSize(width: w, height: h)
+                }
+            }()
+
+            let frameWidth  = size.width
+            let frameHeight = size.height
 
             ZStack(alignment: .topTrailing) {
                 if let preview = composedPreview {
@@ -231,8 +246,14 @@ struct PhotoPreviewView: View {
 
     // MARK: - Action Buttons
 
+    @State private var saveState: SaveState = .idle
+
+    private enum SaveState {
+        case idle, saving, saved, failed(String)
+    }
+
     private var actionButtons: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 12) {
             // Retake
             Button(action: { dismiss() }) {
                 HStack(spacing: 8) {
@@ -252,6 +273,43 @@ struct PhotoPreviewView: View {
                 )
             }
             .disabled(viewModel.isPrinting)
+
+            // Save
+            Button(action: { Task { await saveImage() } }) {
+                HStack(spacing: 8) {
+                    if case .saving = saveState {
+                        ProgressView().tint(.white)
+                    } else if case .saved = saveState {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 15, weight: .bold))
+                        Text("Saved")
+                            .font(.system(size: 16, weight: .semibold))
+                    } else {
+                        Image(systemName: "square.and.arrow.down")
+                            .font(.system(size: 15, weight: .semibold))
+                        Text("Save")
+                            .font(.system(size: 16, weight: .semibold))
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 56)
+                .foregroundStyle(.white.opacity(0.85))
+                .background({
+                    if case .saved = saveState {
+                        return Color.green.opacity(0.4)
+                    }
+                    return Color.white.opacity(0.1)
+                }())
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(.white.opacity(0.15), lineWidth: 1)
+                )
+            }
+            .disabled(viewModel.isPrinting || {
+                if case .saving = saveState { return true }
+                return false
+            }())
 
             // Print
             Button(action: { Task { await viewModel.print(receiptId: receiptId) } }) {
@@ -285,6 +343,27 @@ struct PhotoPreviewView: View {
             .disabled(viewModel.isPrinting)
         }
         .padding(.horizontal, 24)
+    }
+
+    private func saveImage() async {
+        guard let sourceImage = viewModel.image ?? self.image as UIImage? else { return }
+        saveState = .saving
+
+        let finalImage = await Task.detached(priority: .userInitiated) {
+            ImageProcessor.shared.processForThermalPrint(sourceImage)
+        }.value
+
+        guard let imageToSave = finalImage else {
+            saveState = .failed("Processing failed")
+            return
+        }
+
+        UIImageWriteToSavedPhotosAlbum(imageToSave, nil, nil, nil)
+        withAnimation { saveState = .saved }
+
+        // Reset after 2 seconds
+        try? await Task.sleep(nanoseconds: 2_000_000_000)
+        withAnimation { saveState = .idle }
     }
 
     // navigateBackToStart() removed — using router.popToRoot() instead

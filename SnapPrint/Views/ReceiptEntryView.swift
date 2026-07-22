@@ -1,4 +1,6 @@
 import SwiftUI
+import StarIO
+import StarIO_Extension
 
 // MARK: - ReceiptEntryView
 
@@ -291,26 +293,42 @@ struct AdminSettingsView: View {
     @State private var backendURL  = AppConfig.backendBaseURL
     @State private var printerPort = AppConfig.printerPortName
     @State private var apiKey      = AppConfig.apiKey
-#if DEBUG
-    @State private var mockMode    = AppConfig.mockMode
-    @State private var mockPrinter = AppConfig.mockPrinter
-#endif
+    @State private var beastMode   = AppConfig.beastMode
+    @State private var footerLine1 = AppConfig.footerLine1
+    @State private var footerLine2 = AppConfig.footerLine2
+
+    // Discovery State
+    @State private var discoveredPrinters: [PortInfo] = []
+    @State private var isSearching = false
+    @State private var searchError: String? = nil
+
+    // Diagnostic State
+    @State private var isTesting = false
+    @State private var testResult: String? = nil
 
     var body: some View {
         NavigationStack {
             Form {
-#if DEBUG
-                Section {
-                    Toggle("Mock Mode", isOn: $mockMode)
-                } header: {
-                    Text("Debug")
-                } footer: {
-                    Text("Mock mode bypasses real backend & printer for testing.")
+                Section("Mode Configuration") {
+                    Toggle("Beast Mode", isOn: $beastMode)
+                    Text("If enabled, the app skips receipt code verification and goes straight to the camera screen.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
-#endif
+
+                Section("Print Footer Text") {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Line 1 (Title)").font(.caption).foregroundStyle(.secondary)
+                        TextField("Thanks for using", text: $footerLine1)
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Line 2 (Subtitle)").font(.caption).foregroundStyle(.secondary)
+                        TextField("SnapPrint ✦", text: $footerLine2)
+                    }
+                }
 
                 Section("Backend") {
-                    TextField("https://api.yourdomain.com", text: $backendURL)
+                    TextField("https://print.thevietlab.com", text: $backendURL)
                         .keyboardType(.URL)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
@@ -319,14 +337,93 @@ struct AdminSettingsView: View {
                         .textInputAutocapitalization(.never)
                 }
 
-                Section("Printer") {
-#if DEBUG
-                    Toggle("Mock Printer", isOn: $mockPrinter)
-#endif
+                Section("Printer Port Selection") {
                     TextField("USB:Star mC-Print3", text: $printerPort)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
-                    Text("Format: USB:Star mC-Print3  or  TCP:192.168.x.x")
+                    Text("Selected Port: \(printerPort.isEmpty ? "None" : printerPort)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Section("Printer Discovery") {
+                    Button(action: runPrinterDiscovery) {
+                        HStack {
+                            if isSearching {
+                                ProgressView()
+                                    .tint(.blue)
+                                    .padding(.trailing, 8)
+                                Text("Searching...")
+                            } else {
+                                Image(systemName: "magnifyingglass")
+                                Text("Search Connected Printers")
+                            }
+                        }
+                    }
+                    .disabled(isSearching)
+
+                    if !discoveredPrinters.isEmpty {
+                        ForEach(discoveredPrinters, id: \.portName) { printer in
+                            Button(action: {
+                                printerPort = printer.portName ?? ""
+                            }) {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(printer.modelName ?? "Unknown Star Printer")
+                                            .font(.body)
+                                            .foregroundStyle(.white)
+                                        Text("Port: \(printer.portName ?? "Unknown")")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                    if printerPort == (printer.portName ?? "") {
+                                        Image(systemName: "checkmark")
+                                            .foregroundColor(.blue)
+                                            .fontWeight(.bold)
+                                    }
+                                }
+                            }
+                        }
+                    } else if let errorMsg = searchError {
+                        Text(errorMsg)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    } else {
+                        Text("Tap Search to detect USB, Bluetooth, or LAN printers automatically.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Section("🔧 Diagnostic") {
+                    Button {
+                        isTesting = true
+                        testResult = nil
+                        Task {
+                            let result = await PrinterService.shared.testPrint()
+                            testResult = result
+                            isTesting = false
+                        }
+                    } label: {
+                        HStack {
+                            Image(systemName: "printer.dotmatrix")
+                            Text("Test Print (All Emulations)")
+                            Spacer()
+                            if isTesting {
+                                ProgressView()
+                            }
+                        }
+                    }
+                    .disabled(isTesting)
+
+                    if let result = testResult {
+                        Text(result)
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundStyle(.green)
+                    }
+
+                    Text("Gửi text đơn giản bằng TẤT CẢ emulation modes. Mode nào đúng sẽ in ra giấy.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -349,13 +446,39 @@ struct AdminSettingsView: View {
                         AppConfig.backendBaseURL  = backendURL
                         AppConfig.printerPortName = printerPort
                         AppConfig.apiKey          = apiKey
-#if DEBUG
-                        AppConfig.mockMode        = mockMode
-                        AppConfig.mockPrinter     = mockPrinter
-#endif
+                        AppConfig.beastMode       = beastMode
+                        AppConfig.footerLine1     = footerLine1
+                        AppConfig.footerLine2     = footerLine2
                         dismiss()
                     }
                     .fontWeight(.bold)
+                }
+            }
+        }
+    }
+
+    private func runPrinterDiscovery() {
+        isSearching = true
+        searchError = nil
+        discoveredPrinters = []
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            var allPrinters: [PortInfo] = []
+
+            do {
+                // "ALL:" is the unified SDK search target for USB, Bluetooth, and Ethernet
+                if let found = try SMPort.searchPrinter(target: "ALL:") as? [PortInfo] {
+                    allPrinters = found
+                }
+            } catch {
+                print("DEBUG: Printer discovery searchPrinter('ALL:') failed with error: \(error.localizedDescription)")
+            }
+
+            DispatchQueue.main.async {
+                self.discoveredPrinters = allPrinters
+                self.isSearching = false
+                if allPrinters.isEmpty {
+                    self.searchError = "No printers found. Ensure the printer is turned on, MFi cable is connected to the 'iPad' port, and other printer apps are closed."
                 }
             }
         }

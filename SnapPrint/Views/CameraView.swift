@@ -11,6 +11,10 @@ struct CameraView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var router: AppRouter
 
+    @State private var showAdminPanel = false
+    @State private var tapCount = 0
+    @State private var tapResetTask: Task<Void, Never>?
+
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
@@ -18,6 +22,7 @@ struct CameraView: View {
             // Camera preview (chỉ show khi session ready)
             if viewModel.isCameraReady {
                 CameraPreviewLayer(session: viewModel.session)
+                    .saturation(0.0) // live preview in black and white
                     .ignoresSafeArea()
             } else {
                 // Placeholder khi camera đang khởi động
@@ -61,6 +66,9 @@ struct CameraView: View {
                 viewModel.navigateToPreview = false
             }
         }
+        .sheet(isPresented: $showAdminPanel) {
+            AdminSettingsView()
+        }
         .alert("Camera Error", isPresented: $viewModel.showError) {
             Button("OK") { dismiss() }
         } message: {
@@ -71,12 +79,17 @@ struct CameraView: View {
     // MARK: - Top Bar
     private var topBar: some View {
         HStack {
-            Button(action: { dismiss() }) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(.white)
+            if receiptId != "BEAST_MODE" {
+                Button(action: { dismiss() }) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 44, height: 44)
+                        .background(.white.opacity(0.12), in: Circle())
+                }
+            } else {
+                Color.clear
                     .frame(width: 44, height: 44)
-                    .background(.white.opacity(0.12), in: Circle())
             }
 
             Spacer()
@@ -84,6 +97,10 @@ struct CameraView: View {
             Text("Take Photo")
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(.white)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    handleSecretTap()
+                }
 
             Spacer()
 
@@ -93,6 +110,21 @@ struct CameraView: View {
         }
         .padding(.horizontal, 20)
         .padding(.top, 16)
+    }
+
+    private func handleSecretTap() {
+        tapResetTask?.cancel()
+        tapCount += 1
+        if tapCount >= 5 {
+            tapCount = 0
+            showAdminPanel = true
+            return
+        }
+        tapResetTask = Task {
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            guard !Task.isCancelled else { return }
+            tapCount = 0
+        }
     }
 
     // MARK: - Bottom Controls

@@ -13,7 +13,7 @@ enum AppConfig {
 
     /// Base URL of the SnapPrint backend (e.g. https://print.yourdomain.com)
     static var backendBaseURL: String {
-        get { UserDefaults.standard.string(forKey: "snapprint_backendURL") ?? "" }
+        get { UserDefaults.standard.string(forKey: "snapprint_backendURL") ?? "https://print.thevietlab.com" }
         set { UserDefaults.standard.set(newValue, forKey: "snapprint_backendURL") }
     }
 
@@ -28,7 +28,7 @@ enum AppConfig {
     // MARK: - Printer (Star mC-Print3, USB-C)
 
     static var printerPortName: String {
-        get { UserDefaults.standard.string(forKey: "snapprint_printerPort") ?? "USB:Star mC-Print3" }
+        get { UserDefaults.standard.string(forKey: "snapprint_printerPort") ?? "AutoSwitch:" }
         set { UserDefaults.standard.set(newValue, forKey: "snapprint_printerPort") }
     }
     static let printerPortSettings = ""
@@ -38,39 +38,37 @@ enum AppConfig {
 
     static let thermalPrintWidthPx: CGFloat = 576
 
-    // MARK: - UI
+    // MARK: - UI & Custom Footer
 
     static let appName           = "SnapPrint"
     static let receiptCodeLength = 6
+
+    /// Line 1 of print footer (e.g. "Thanks for using")
+    static var footerLine1: String {
+        get { UserDefaults.standard.string(forKey: "snapprint_footerLine1") ?? "Thanks for using" }
+        set { UserDefaults.standard.set(newValue, forKey: "snapprint_footerLine1") }
+    }
+
+    /// Line 2 of print footer (e.g. "SnapPrint ✦")
+    static var footerLine2: String {
+        get { UserDefaults.standard.string(forKey: "snapprint_footerLine2") ?? "SnapPrint ✦" }
+        set { UserDefaults.standard.set(newValue, forKey: "snapprint_footerLine2") }
+    }
 
     // MARK: - Camera
 
     static let countdownSeconds = 3
 
-    // MARK: - Debug / Testing (only available in DEBUG builds)
+    // MARK: - Beast Mode
 
-#if DEBUG
-    static var mockMode: Bool {
-        get {
-            if UserDefaults.standard.object(forKey: "snapprint_mockMode") != nil {
-                return UserDefaults.standard.bool(forKey: "snapprint_mockMode")
-            }
-            return false
-        }
-        set { UserDefaults.standard.set(newValue, forKey: "snapprint_mockMode") }
+    static var beastMode: Bool {
+        get { UserDefaults.standard.bool(forKey: "snapprint_beastMode") }
+        set { UserDefaults.standard.set(newValue, forKey: "snapprint_beastMode") }
     }
 
-    static var mockPrinter: Bool {
-        get {
-            if UserDefaults.standard.object(forKey: "snapprint_mockPrinter") != nil {
-                return UserDefaults.standard.bool(forKey: "snapprint_mockPrinter")
-            }
-            return false
-        }
-        set { UserDefaults.standard.set(newValue, forKey: "snapprint_mockPrinter") }
-    }
-
-    static let mockReceiptId   = "MOCK-001"
+    // MARK: - Mock Fallback (internal constants, no toggles)
+    static let mockReceiptId   = "BEAST_MODE"
     static let mockPrintDelay: Double = 1.5
-#endif
+    static var mockMode: Bool { false }
+    static var mockPrinter: Bool { false }
 }

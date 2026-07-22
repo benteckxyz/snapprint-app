@@ -45,22 +45,28 @@
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 	</array>
+	<key>UIRequiresFullScreen</key>
+	<true/>
 
 	<!-- ─── Camera ──────────────────────────────────────── -->
 	<key>NSCameraUsageDescription</key>
 	<string>SnapPrint uses the camera to take photos for thermal printing.</string>
 
-
-	<!-- ─── USB-C MFi (Star mC-Print3) ───────────────────
-	     Commented out for Personal/Free Apple Developer accounts to prevent dyld launch/install errors.
-	     Uncomment this block when building with a Paid Developer Account for Production.
+	<!-- ─── Photo Library (Save) ──────────────────────── -->
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>SnapPrint saves the processed print image to your Photo Library.</string>
+	<!-- ─── USB-C MFi (Star mC-Print3) ─────────────────── -->
 	<key>UISupportedExternalAccessoryProtocols</key>
 	<array>
-		<string>jp.star-m.stario.StarIoExtPort</string>
+		<string>jp.star-m.starpro</string>
 	</array>
-	-->
+
+	<!-- ─── Bluetooth (Required by StarIO SDK) ──────────── -->
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>SnapPrint may use Bluetooth to connect to Star thermal receipt printers.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>SnapPrint may use Bluetooth to connect to Star thermal receipt printers.</string>
 
 	<!-- ─── Local Network ───────────────────────────────── -->
 	<key>NSLocalNetworkUsageDescription</key>
